@@ -1,0 +1,17 @@
+[build-system]
+build-backend = "poetry.masonry.api"
+requires = ["poetry>=0.12"]
+
+[tool]
+[tool.poetry]
+authors = ["Your Name <you@example.com>"]
+description = ""
+name = "repl_python3_worldometercovid"
+version = "0.1.0"
+[tool.poetry.dependencies]
+lxml = "^4.6.3"
+pandas = "^1.2.4"
+python = "^3.8"
+openpyxl = "3.0.7"
+flask = "^2.0.0"
+[tool.poetry.dev-dependencies]
