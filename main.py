@@ -11,19 +11,19 @@ app = Flask('')
 
 @app.route('/')
 def home():
-  file = os.path.join(DATA_DIR, 'worldometer_covid_dataset.csv')
-  if os.path.isfile(file):
-    rows = pd.read_csv(file).shape[0]
-    return '<b>Hello, I am alive!!!</b><br>CSV File has %s rows.' % rows
-  else:
-    return '<b>Hello, I am alive!!!</b><br>No CSV File Found.'
+    file = os.path.join(DATA_DIR, 'worldometer_covid_dataset.csv')
+    if os.path.isfile(file):
+        rows = pd.read_csv(file).shape[0]
+        return '<b>Hello, I am alive!!!</b><br>CSV File has %s rows.' % rows
+    else:
+        return '<b>Hello, I am alive!!!</b><br>No CSV File Found.'
 
 def run_server():
-      app.run(host='0.0.0.0', port=8000)
+    app.run(host='0.0.0.0', port=8000)
   
 def keep_alive():
-  t = Thread(target=run_server)
-  t.start()
+    t = Thread(target=run_server)
+    t.start()
 
 
 def check_if_file_exists(file, ff):
@@ -72,15 +72,20 @@ def scrape(file, format='xlsx', debug=True):
     else:
         df.to_csv(f'{file}.{format}', index=False)
     del cols, TRS, row, debug, date_time
-    return file
+    return file, df.shape[0]
 
-def git_push(debug=True):
+def git_push(rows, debug=True):
     if not debug:
-        sp.call('git config --global user.email "alvynabranches@gmail.com"')
-        sp.call('git config --global user.name')
-        sp.call('git add .')
-        sp.call(f'git commit -m {str(dt.now())}')
-        sp.call(f'git push origin master')
+        try: sp.call('git config --global user.email "alvynabranches@gmail.com"')
+        except Exception as e: print(e)
+        try: sp.call('git config --global user.name "alvynabranches"')
+        except Exception as e: print(e)
+        try: sp.call(f'git pull https://alvynabranches:{os.environ["GITHUB_PASSWORD"]}@github.com/alvynabranches/Covid_19_Dataset.git')
+        except Exception as e: print(e)
+        try: sp.call('git add .')
+        except Exception as e: print(e)
+        sp.call(f'git commit -a -m {str(dt.now())}_rows={rows}')
+        sp.call(f'git push https://alvynabranches:{os.environ["GITHUB_PASSWORD"]}@github.com/alvynabranches/Covid_19_Dataset.git --all')
 
 def run():
     i, file = 0, os.path.join(DATA_DIR, 'worldometer_covid_dataset')
@@ -88,10 +93,11 @@ def run():
         while True:
             if socket.gethostbyname(socket.gethostname()) != '127.0.0.1':
                 s = perf_counter()
-                file = scrape(file, 'csv', debug=DEBUG)
-                git_push(debug=DEBUG)
+                file, rows = scrape(file, 'csv', debug=DEBUG)
+                # git_push(rows, debug=DEBUG)
                 e = perf_counter()
-                print(f'Time Taken -> {round(e-s, 2)} seconds'); sleep(600)
+                t = e - s
+                print(f'Time Taken -> {round(t, 2)} seconds'); sleep(abs(600 - t))
             else: sleep(1); print('.'*i, end='\r')
             i += 1
     except KeyboardInterrupt: pass
