@@ -1,7 +1,7 @@
-import requests, lxml.html as lh, numpy as np, pandas as pd, os, socket, sys, subprocess as sp
+import json, requests, lxml.html as lh, numpy as np, pandas as pd, os, socket, sys, subprocess as sp
 from datetime import datetime as dt
 from time import perf_counter, sleep
-from flask import Flask
+from flask import Flask, send_file
 from threading import Thread
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
@@ -13,18 +13,25 @@ app = Flask('')
 def home():
     file = os.path.join(DATA_DIR, 'worldometer_covid_dataset.csv')
     if os.path.isfile(file):
-        rows = pd.read_csv(file).shape[0]
-        return '<b>Hello, I am alive!!!</b><br>CSV File has %s rows.' % rows
+        rows, bytes_size = pd.read_csv(file).shape[0], os.stat(file).st_size * 1e-6
+        return '<b>Hello, I am alive!!!</b><br>CSV File has %s rows.<br> The size of the CSV file is %f MB' % (rows, bytes_size)
     else:
         return '<b>Hello, I am alive!!!</b><br>No CSV File Found.'
 
+@app.route('/download', methods=['GET'])
+def download():
+    file = os.path.join(DATA_DIR, 'worldometer_covid_dataset.csv')
+    if os.path.isfile(file):
+        return send_file(file, as_attachment=True)
+    else:
+        return json.dumps({'Error': 'File not found'})
+
 def run_server():
-    app.run(host='0.0.0.0', port=8000)
+    app.run(host='0.0.0.0', port=8000, debug=DEBUG)
   
 def keep_alive():
     t = Thread(target=run_server)
     t.start()
-
 
 def check_if_file_exists(file, ff):
     for i in range(1, 2000):
@@ -89,19 +96,22 @@ def git_push(rows, debug=True):
 
 def run():
     i, file = 0, os.path.join(DATA_DIR, 'worldometer_covid_dataset')
+    rows = 0
     try:
         while True:
             if socket.gethostbyname(socket.gethostname()) != '127.0.0.1':
                 s = perf_counter()
-                file, rows = scrape(file, 'csv', debug=DEBUG)
-                # git_push(rows, debug=DEBUG)
+                file, _ = scrape(file, 'csv', debug=DEBUG)
                 e = perf_counter()
                 t = e - s
-                print(f'Time Taken -> {round(t, 2)} seconds'); sleep(abs(600 - t))
+                print(f'{str(dt.now())} -> Time Taken -> {round(t, 2)} seconds'); sleep(abs(600 - t))
             else: sleep(1); print('.'*i, end='\r')
             i += 1
     except KeyboardInterrupt: pass
     finally: del i
+    return rows
 
 if not DEBUG: keep_alive()
-run()
+rows = run()
+git_push(rows, debug=DEBUG)
+print('The END')
